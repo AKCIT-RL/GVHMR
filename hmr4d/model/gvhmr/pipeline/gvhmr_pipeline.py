@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -100,10 +101,14 @@ class Pipeline(nn.Module):
                     outputs["pred_smpl_params_global"]["transl"] = pp_static_joint_cam(outputs, self.endecoder)
                 else:
                     outputs["pred_smpl_params_global"]["transl"] = pp_static_joint(outputs, self.endecoder)
-                body_pose = process_ik(outputs, self.endecoder)
-                decode_dict["body_pose"] = body_pose
-                outputs["pred_smpl_params_global"]["body_pose"] = body_pose
-                outputs["pred_smpl_params_incam"]["body_pose"] = body_pose
+                # DYSNM ablation: GVHMR_PROCESS_IK=0 keeps the translation fix but skips the CCD-IK pose rewrite
+                if os.environ.get("GVHMR_PROCESS_IK", "1") != "0":
+                    body_pose = process_ik(outputs, self.endecoder)
+                    decode_dict["body_pose"] = body_pose
+                    outputs["pred_smpl_params_global"]["body_pose"] = body_pose
+                    outputs["pred_smpl_params_incam"]["body_pose"] = body_pose
+                else:
+                    Log.info("[DYSNM] GVHMR_PROCESS_IK=0: skipping process_ik post-processing")
 
             return outputs
 
